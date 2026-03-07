@@ -1,5 +1,761 @@
 <!DOCTYPE html>
+<html lang="ja"><!DOCTYPE html>
 <html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国LiB部材市況ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--card2:#253347;--card-hover:#334155;--border:#334155;--text:#e2e8f0;--text-muted:#94a3b8;--accent:#38bdf8;--accent2:#818cf8;--positive:#34d399;--negative:#f87171;--neutral:#94a3b8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+#drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;transition:background .3s}
+#drop-zone.dragover{background:rgba(56,189,248,.1)}
+.drop-icon{font-size:64px;margin-bottom:20px;opacity:.6}.drop-title{font-size:24px;font-weight:700;margin-bottom:8px}.drop-sub{color:var(--text-muted);font-size:14px;margin-bottom:24px}
+.drop-btn{background:var(--accent);color:var(--bg);border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}.drop-btn:hover{opacity:.85}
+#dashboard{display:none;padding:20px;max-width:1600px;margin:0 auto}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;font-weight:700}.header h1 span{color:var(--accent)}.header-meta{color:var(--text-muted);font-size:13px}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reload-btn{background:var(--card);color:var(--text-muted);border:1px solid var(--border);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px}.reload-btn:hover{color:var(--text);border-color:var(--accent)}
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:20px}
+.summary-card{background:var(--card);border-radius:10px;padding:14px 16px;border:1px solid var(--border)}
+.summary-card .label{font-size:11px;color:var(--text-muted);margin-bottom:3px}.summary-card .value{font-size:20px;font-weight:700}.summary-card .sub{font-size:11px;margin-top:3px}
+.up{color:var(--positive)}.down{color:var(--negative)}.flat{color:var(--neutral)}
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.tab:hover{color:var(--text);border-color:var(--text-muted)}.tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
+/* Sub-group filter */
+.subgroup-bar{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.sg-tab{padding:5px 12px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s}
+.sg-tab:hover{color:var(--text);border-color:var(--text-muted)}.sg-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.section-card{background:var(--card);border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid var(--border)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:16px;font-weight:600}
+.section-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chart-controls{display:flex;gap:6px}.ctrl-btn{padding:5px 12px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer}.ctrl-btn:hover{color:var(--text)}.ctrl-btn.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.chart-container{position:relative;height:400px}
+.product-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.product-chip{padding:4px 10px;border-radius:12px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--text-muted);background:transparent;transition:all .15s}
+.product-chip:hover{color:var(--text)}.product-chip.selected{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.1)}
+.dl-group{display:flex;gap:5px}
+.dl-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all .2s}.dl-btn:hover{color:var(--text);border-color:var(--accent)}.dl-btn svg{width:12px;height:12px}
+.dl-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.table-wrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--text-muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--card);z-index:2}
+td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:var(--card);z-index:1}th:first-child{z-index:3}
+tr:hover td{background:var(--card-hover)}tr:hover td:first-child{background:var(--card-hover)}
+/* group header row in table */
+.tbl-group-row td{background:var(--card2)!important;color:var(--accent);font-weight:600;font-size:12px;border-bottom:2px solid var(--accent2);padding:6px 10px}
+.unit-toggle{display:flex;align-items:center;gap:8px;font-size:13px}
+.switch{position:relative;width:44px;height:24px}.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:12px;cursor:pointer;transition:.3s}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:var(--text);border-radius:50%;transition:.3s}
+input:checked+.slider{background:var(--accent)}input:checked+.slider:before{transform:translateX(20px)}
+.loading{display:none;text-align:center;padding:60px;font-size:16px;color:var(--text-muted)}.loading.show{display:block}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.export-toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:8px;font-size:13px;z-index:9999;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.export-toast.show{display:flex;align-items:center;gap:10px}
+/* Brand Logo */
+.brand-logo{display:flex;align-items:baseline;gap:2px;margin-bottom:6px}
+.brand-center{justify-content:center;margin-bottom:20px}
+#auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px}
+#auth-screen .auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:380px;width:100%;text-align:center}
+#auth-screen .auth-icon{font-size:48px;margin-bottom:16px}
+#auth-screen .auth-title{font-size:20px;font-weight:700;margin-bottom:6px}
+#auth-screen .auth-sub{color:var(--text-muted);font-size:13px;margin-bottom:24px}
+#auth-screen input{width:100%;padding:12px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:15px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px}
+#auth-screen input:focus{border-color:var(--accent)}
+#auth-screen .auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent);color:var(--bg);font-size:15px;font-weight:600;cursor:pointer}
+#auth-screen .auth-btn:hover{opacity:.85}
+#auth-screen .auth-error{color:var(--negative);font-size:13px;margin-top:8px;display:none}
+#app-content{display:none}
+.brand-lib{font-size:28px;font-weight:800;color:#f97316;letter-spacing:-1px;font-style:italic}
+.brand-note{font-size:28px;font-weight:300;color:#fb923c;letter-spacing:-0.5px}
+.brand-by{font-size:12px;color:#fdba74;margin-left:8px;font-weight:500;letter-spacing:0.5px}
+/* Export handled via direct canvas drawing */
+@media(max-width:768px){.chart-container{height:300px}.summary-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-icon">🔐</div>
+    <div class="auth-title">LiB Note メンバー認証</div>
+    <div class="auth-sub">noteメンバーシップ限定コンテンツです<br>記事に記載のパスワードを入力してください</div>
+    <input type="password" id="auth-input" placeholder="パスワード" onkeydown="if(event.key==='Enter')doAuth()">
+    <button class="auth-btn" onclick="doAuth()">ログイン</button>
+    <div class="auth-error" id="auth-error">パスワードが正しくありません</div>
+  </div>
+</div>
+<div id="app-content">
+<div id="drop-zone">
+  <div class="brand-logo brand-center"><span class="brand-lib">LiB</span><span class="brand-note">Note</span><span class="brand-by">By そーなんだ化学</span></div>
+  <div class="drop-icon">📊</div>
+  <div class="drop-title">中国LiB部材市況ダッシュボード</div>
+  <div class="drop-sub">部材市況Excelファイルをドラッグ＆ドロップ、またはクリックして選択</div>
+  <button class="drop-btn" onclick="document.getElementById('fi').click()">ファイルを選択</button>
+  <input type="file" id="fi" accept=".xlsx,.xls" style="display:none">
+</div>
+<div class="loading" id="loading"><div class="spinner"></div><div>データを解析中...</div></div>
+<div id="dashboard">
+  <div class="header">
+    <div><div class="brand-logo"><span class="brand-lib">LiB</span><span class="brand-note">Note</span><span class="brand-by">By そーなんだ化学</span></div><h1>🔋 LiB部材市況 <span>ダッシュボード</span></h1><div class="header-meta" id="data-period"></div></div>
+    <div class="header-actions">
+      <div class="unit-toggle"><span>CNY</span><label class="switch"><input type="checkbox" id="usd-toggle"><span class="slider"></span></label><span>USD</span></div>
+      <button class="reload-btn" onclick="location.reload()">別ファイルを読む</button>
+    </div>
+  </div>
+  <div class="summary-row" id="summary-row"></div>
+  <div class="tab-bar" id="tab-bar"></div>
+  <div class="subgroup-bar" id="subgroup-bar" style="display:none"></div>
+  <div class="section-card" id="chart-section">
+    <div class="section-header">
+      <div class="section-title" id="chart-title">月末値推移</div>
+      <div class="section-right">
+        <div class="chart-controls">
+          <button class="ctrl-btn active" onclick="setRange('all',this)">全期間</button>
+          <button class="ctrl-btn" onclick="setRange('12',this)">12ヶ月</button>
+          <button class="ctrl-btn" onclick="setRange('6',this)">6ヶ月</button>
+        </div>
+        <div class="dl-sep"></div>
+        <div class="dl-group">
+          <button class="dl-btn" onclick="doExport('chart','png')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PNG</button>
+          <button class="dl-btn" onclick="doExport('chart','pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button>
+        </div>
+      </div>
+    </div>
+    <div class="product-selector" id="product-selector"></div>
+    <div class="chart-container"><canvas id="main-chart"></canvas></div>
+  </div>
+  <div class="section-card" id="table-section">
+    <div class="section-header">
+      <div class="section-title" id="table-title">直近12ヶ月データ</div>
+      <div class="section-right">
+        <div class="dl-group">
+          <button class="dl-btn" onclick="doExport('table','png')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PNG</button>
+          <button class="dl-btn" onclick="doExport('table','pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button>
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="data-table"></table></div>
+  </div>
+</div>
+<div class="export-toast" id="export-toast"><div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px"></div><span id="toast-text"></span></div>
+
+<script>
+// ========== GLOBALS ==========
+let allData={},allDataUSD={},categories=[],currentCategory='',currentSubgroup='all',selectedProducts=new Set(),mainChart=null,rangeMonths='all',sortedMonths=[],useUSD=false;
+const SECTIONS=['正極材料と原材料','負極材料と原材料','セパレーター','電解液','添加剤及び他材料','リチウム電池'];
+const COLORS=['#38bdf8','#818cf8','#34d399','#f87171','#fbbf24','#a78bfa','#fb923c','#2dd4bf','#f472b6','#a3e635','#e879f9','#22d3ee','#84cc16','#f59e0b','#ec4899','#06b6d4','#8b5cf6','#ef4444','#14b8a6','#eab308','#d946ef','#0ea5e9','#7c3aed','#f97316'];
+// Set Chart.js global font to ensure Japanese text renders properly
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif';
+
+// ===== SUB-GROUPS for 正極材料 =====
+const SUBGROUPS = {
+  '正極材料と原材料': [
+    { id: 'all', label: 'すべて' },
+    { id: 'ncm', label: '三元系正極材', match: p => /三元材料|三元系材料/.test(p) && !/前駆体/.test(p) },
+    { id: 'lfp_lmo_lco', label: 'LFP / LMO / LCO', match: p => /リン酸鉄リチウム|マンガン酸リチウム|コバルト酸リチウム/.test(p) },
+    { id: 'precursor', label: '前駆体', match: p => /前駆体/.test(p) },
+    { id: 'lithium', label: 'リチウム原料', match: p => /炭酸リチウム|水酸化リチウム|リチウム輝石/.test(p) },
+    { id: 'metal', label: '金属原料', match: p => /コバルト|ニッケル|マンガン|電解/.test(p) && !/リン酸鉄|マンガン酸リチウム|コバルト酸リチウム/.test(p) },
+    { id: 'other_raw', label: 'その他原料', match: p => /リン酸第二鉄|二酸化マンガン|四酸化コバルト/.test(p) }
+  ]
+};
+
+function getSubgroupLabel(cat, prod) {
+  const sgs = SUBGROUPS[cat];
+  if (!sgs) return null;
+  for (const sg of sgs) {
+    if (sg.id !== 'all' && sg.match && sg.match(prod)) return sg.label;
+  }
+  return 'その他';
+}
+
+function filterBySubgroup(products, cat) {
+  if (currentSubgroup === 'all') return products;
+  const sgs = SUBGROUPS[cat];
+  if (!sgs) return products;
+  const sg = sgs.find(s => s.id === currentSubgroup);
+  if (!sg || !sg.match) return products;
+  return products.filter(p => sg.match(p));
+}
+
+// ========== FILE ==========
+const dz=document.getElementById('drop-zone'),fi=document.getElementById('fi');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])proc(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])proc(e.target.files[0])});
+function proc(file){dz.style.display='none';document.getElementById('loading').classList.add('show');const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});parseWB(wb);document.getElementById('loading').classList.remove('show');document.getElementById('dashboard').style.display='block';render()}catch(e){alert('エラー: '+e.message);location.reload()}};r.readAsArrayBuffer(file)}
+
+// ========== PARSE ==========
+function psn(n){n=n.trim();let m=n.match(/^(\d{2})年(\d{1,2})月/);if(m)return{y:2000+parseInt(m[1]),m:parseInt(m[2])};m=n.match(/^(\d{4})年(\d{1,2})月/);if(m)return{y:parseInt(m[1]),m:parseInt(m[2])};return null}
+function mk(y,m){return`${y}-${String(m).padStart(2,'0')}`}
+function parseWB(wb){allData={};allDataUSD={};const inf=[];for(const s of wb.SheetNames){const p=psn(s);if(p)inf.push({name:s,...p,key:mk(p.y,p.m)})}inf.sort((a,b)=>a.key.localeCompare(b.key));sortedMonths=inf.map(s=>s.key);for(const si of inf){const rows=XLSX.utils.sheet_to_json(wb.Sheets[si.name],{header:1,defval:null,raw:true});parseS(rows,si.key)}}
+function parseS(rows,mK){let cat='',usd=false;for(let i=0;i<rows.length;i++){const row=rows[i];if(!row||!row[0])continue;const a=String(row[0]).trim();if(SECTIONS.includes(a)){cat=a;if(!allData[cat])allData[cat]={};if(!allDataUSD[cat])allDataUSD[cat]={};continue}if(a==='製品'){usd=row.length>=11&&row[6]!=null;continue}if(!cat)continue;const p=a.replace(/。$/,'').trim(),sv=pn(row[1]),ev=pn(row[2]),cv=pn(row[3]),u=row[4]?String(row[4]).trim():'';if(sv===null&&ev===null)continue;if(!allData[cat][p])allData[cat][p]=[];allData[cat][p].push({month:mK,start:sv,end:ev,change:cv,unit:u});if(usd&&row.length>=11){const us=pn(row[7]),ue=pn(row[8]),uc=pn(row[9]),uu=row[10]?String(row[10]).trim():'';if(us!==null||ue!==null){if(!allDataUSD[cat][p])allDataUSD[cat][p]=[];allDataUSD[cat][p].push({month:mK,start:us,end:ue,change:uc,unit:uu})}}}}
+function pn(v){if(v==null||v===''||v==='-'||v==='#VALUE!')return null;if(typeof v==='number'&&!isNaN(v))return v;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?null:n}
+
+// ========== RENDER ==========
+function render(){
+  categories=SECTIONS.filter(c=>allData[c]&&Object.keys(allData[c]).length>0);
+  if(sortedMonths.length>0)document.getElementById('data-period').textContent=`データ期間: ${fml(sortedMonths[0])} 〜 ${fml(sortedMonths.at(-1))}（${sortedMonths.length}ヶ月分）`;
+  const bar=document.getElementById('tab-bar');bar.innerHTML='';
+  for(const c of categories){const b=document.createElement('button');b.className='tab';b.textContent=c;b.onclick=()=>{currentSubgroup='all';selCat(c)};bar.appendChild(b)}
+  if(categories.length>0)selCat(categories[0]);
+  document.getElementById('usd-toggle').addEventListener('change',function(){useUSD=this.checked;selCat(currentCategory)});
+}
+
+function gd(c){return useUSD?(allDataUSD[c]||allData[c]):allData[c]}
+
+function selCat(cat){
+  currentCategory=cat;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.textContent===cat));
+  // Sub-group bar
+  const sgBar=document.getElementById('subgroup-bar');
+  if(SUBGROUPS[cat]){
+    sgBar.style.display='flex';sgBar.innerHTML='';
+    for(const sg of SUBGROUPS[cat]){
+      const b=document.createElement('button');b.className='sg-tab'+(sg.id===currentSubgroup?' active':'');b.textContent=sg.label;
+      b.onclick=()=>{currentSubgroup=sg.id;selCat(cat)};sgBar.appendChild(b);
+    }
+  } else { sgBar.style.display='none'; }
+
+  const data=gd(cat);if(!data)return;
+  const allProds=Object.keys(data).filter(p=>data[p]?.some(e=>e.end!==null));
+  const prods=filterBySubgroup(allProds,cat);
+
+  renderSummary(data,prods);
+  selectedProducts.clear();prods.slice(0,Math.min(5,prods.length)).forEach(p=>selectedProducts.add(p));
+  renderChips(prods);updChart(data);renderTbl(data,prods,cat);
+  const sgLabel=currentSubgroup!=='all'?` (${SUBGROUPS[cat]?.find(s=>s.id===currentSubgroup)?.label||''})`:'';
+  document.getElementById('chart-title').textContent=cat+sgLabel+' — 月末値推移'+(useUSD?' (USD)':' (CNY)');
+  document.getElementById('table-title').textContent=cat+sgLabel+' — 直近12ヶ月データ';
+}
+
+function renderSummary(data,prods){
+  const row=document.getElementById('summary-row');row.innerHTML='';
+  const lat=sortedMonths.at(-1);let up=0,dn=0,fl=0;
+  for(const p of prods){const e=data[p]?.find(e=>e.month===lat);if(e?.change!=null){if(e.change>0.001)up++;else if(e.change<-0.001)dn++;else fl++}}
+  [{l:'品目数',v:prods.length,s:currentCategory,c:''},{l:'値上がり',v:up,s:fml(lat),c:'up'},{l:'値下がり',v:dn,s:fml(lat),c:'down'},{l:'横ばい',v:fl,s:fml(lat),c:'flat'},{l:'データ月数',v:sortedMonths.length,s:'全期間',c:''}].forEach(c=>{
+    const d=document.createElement('div');d.className='summary-card';d.innerHTML=`<div class="label">${c.l}</div><div class="value ${c.c}">${c.v}</div><div class="sub ${c.c}">${c.s}</div>`;row.appendChild(d)});
+}
+
+function renderChips(prods){
+  const sel=document.getElementById('product-selector');sel.innerHTML='';
+  for(const p of prods){const ch=document.createElement('button');ch.className='product-chip'+(selectedProducts.has(p)?' selected':'');ch.textContent=sn(p);ch.title=p;
+    ch.onclick=()=>{selectedProducts.has(p)?selectedProducts.delete(p):selectedProducts.add(p);ch.classList.toggle('selected');updChart(gd(currentCategory))};sel.appendChild(ch)}
+}
+
+// ========== CHART ==========
+function gm(){return rangeMonths==='all'?[...sortedMonths]:sortedMonths.slice(-parseInt(rangeMonths))}
+function updChart(data){
+  const months=gm(),labels=months.map(fml),ds=[];let ci=0;
+  for(const p of selectedProducts){const map={};(data[p]||[]).forEach(e=>map[e.month]=e);
+    ds.push({label:sn(p),data:months.map(m=>map[m]?.end??null),borderColor:COLORS[ci%COLORS.length],backgroundColor:COLORS[ci%COLORS.length]+'22',borderWidth:2,pointRadius:3,pointHoverRadius:6,tension:.3,spanGaps:true,fill:false});ci++}
+  if(mainChart)mainChart.destroy();
+  mainChart=new Chart(document.getElementById('main-chart').getContext('2d'),{type:'line',data:{labels,datasets:ds},options:copt()});
+}
+function copt(){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:11},boxWidth:12,padding:12}},tooltip:{backgroundColor:'#1e293b',borderColor:'#334155',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#e2e8f0',callbacks:{label:c=>c.parsed.y!=null?`${c.dataset.label}: ${fv(c.parsed.y)}`:''}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:11},maxRotation:45},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',font:{size:11}},grid:{color:'#1e293b'}}}}}
+function setRange(r,btn){rangeMonths=r;document.querySelectorAll('.ctrl-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  const data=gd(currentCategory);updChart(data);
+  const allP=Object.keys(data).filter(p=>data[p]?.some(e=>e.end!==null));
+  renderTbl(data,filterBySubgroup(allP,currentCategory),currentCategory)}
+
+// ========== TABLE ==========
+function renderTbl(data, prods, cat) {
+  const tbl = document.getElementById('data-table'), months = gm().slice(-12);
+  let h = '<thead><tr><th>製品名</th><th>単位</th>';
+  for (const m of months) h += `<th>${fml(m)}</th>`;
+  h += '<th>前月比</th></tr></thead><tbody>';
+
+  // Group products if subgroup=all and has subgroups
+  const showGroups = currentSubgroup === 'all' && SUBGROUPS[cat];
+  if (showGroups) {
+    const groups = {};
+    for (const p of prods) {
+      const gl = getSubgroupLabel(cat, p) || 'その他';
+      if (!groups[gl]) groups[gl] = [];
+      groups[gl].push(p);
+    }
+    const order = SUBGROUPS[cat].filter(s => s.id !== 'all').map(s => s.label);
+    for (const gl of order) {
+      if (!groups[gl] || groups[gl].length === 0) continue;
+      const colSpan = months.length + 3;
+      h += `<tr class="tbl-group-row"><td colspan="${colSpan}">${gl}</td></tr>`;
+      h += buildRows(data, groups[gl], months);
+    }
+    // any remaining
+    for (const gl of Object.keys(groups)) {
+      if (!order.includes(gl)) {
+        h += `<tr class="tbl-group-row"><td colspan="${months.length+3}">${gl}</td></tr>`;
+        h += buildRows(data, groups[gl], months);
+      }
+    }
+  } else {
+    h += buildRows(data, prods, months);
+  }
+  tbl.innerHTML = h + '</tbody>';
+}
+
+function buildRows(data, prods, months) {
+  let h = '';
+  for (const p of prods) {
+    const map = {}; (data[p] || []).forEach(e => map[e.month] = e);
+    const u = data[p]?.[0]?.unit || '';
+    h += `<tr><td title="${p}">${sn(p)}</td><td>${u}</td>`;
+    for (const m of months) { const v = map[m]?.end; h += `<td>${v != null ? fv(v) : '-'}</td>`; }
+    const le = map[months.at(-1)];
+    if (le?.change != null) { const pct = (le.change * 100).toFixed(1); const cls = le.change > 0.001 ? 'up' : le.change < -0.001 ? 'down' : 'flat'; h += `<td class="${cls}">${le.change > 0 ? '+' : ''}${pct}%</td>`; }
+    else h += '<td>-</td>';
+    h += '</tr>';
+  }
+  return h;
+}
+
+// ========== EXPORT (Direct Canvas Drawing) ==========
+const EX = {
+  bg: '#0f172a', card: '#1e293b', card2: '#253347', border: '#334155',
+  text: '#e2e8f0', muted: '#94a3b8', accent: '#38bdf8', accent2: '#818cf8',
+  positive: '#34d399', negative: '#f87171', neutral: '#94a3b8',
+  font: '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif',
+  pad: 40, cardPad: 20, rowH: 28, headerH: 32
+};
+
+async function doExport(target, format) {
+  showToast('エクスポート中...');
+  await sleep(50);
+
+  const cat = currentCategory, data = gd(cat);
+  const allProds = Object.keys(data).filter(p => data[p]?.some(e => e.end !== null));
+  const prods = filterBySubgroup(allProds, cat);
+  const months = gm(), tblMonths = months.slice(-12), lat = sortedMonths.at(-1);
+  let up = 0, dn = 0, fl = 0;
+  for (const p of prods) { const e = data[p]?.find(e => e.month === lat); if (e?.change != null) { if (e.change > 0.001) up++; else if (e.change < -0.001) dn++; else fl++; } }
+  const sgLabel = currentSubgroup !== 'all' ? ` (${SUBGROUPS[cat]?.find(s => s.id === currentSubgroup)?.label || ''})` : '';
+
+  try {
+    let canvas;
+    if (target === 'chart') {
+      canvas = await drawChartExport(cat, sgLabel, data, prods, months, { up, dn, fl, lat });
+    } else {
+      canvas = await drawTableExport(cat, sgLabel, data, prods, tblMonths, { up, dn, fl, lat });
+    }
+
+    const safe = cat.replace(/[^\w\u3000-\u9fff]/g, '_');
+    const ds2 = fml(lat).replace('/', '-');
+    const tg = target === 'chart' ? '_チャート' : '_データ';
+    const fname = `LiB市況_${safe}${tg}_${ds2}`;
+
+    if (format === 'png') {
+      const a = document.createElement('a'); a.download = fname + '.png'; a.href = canvas.toDataURL('image/png'); a.click();
+    } else {
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+      const pw = (canvas.width / 2) * 0.264583, ph = (canvas.height / 2) * 0.264583;
+      const pdf = new jsPDF({ orientation: pw > ph ? 'l' : 'p', unit: 'mm', format: [pw, ph] });
+      pdf.addImage(imgData, 'PNG', 0, 0, pw, ph);
+      pdf.save(fname + '.pdf');
+    }
+    showToast(`${format.toUpperCase()} をダウンロードしました`, 2000);
+  } catch (err) { console.error(err); showToast('エクスポート失敗: ' + err.message, 4000); }
+}
+
+// ===== Draw Header + Summary on canvas =====
+function drawHeader(ctx, W, cat, sgLabel, stats) {
+  const P = EX.pad; let y = P;
+  const orange1 = '#f97316', orange2 = '#fb923c', orange3 = '#fdba74';
+
+  // Brand: "LiB Note By そーなんだ化学" — right aligned
+  ctx.font = `italic 800 32px ${EX.font}`; ctx.fillStyle = orange1;
+  const libTxt = 'LiB';
+  const libW = ctx.measureText(libTxt).width;
+  ctx.font = `300 32px ${EX.font}`; ctx.fillStyle = orange2;
+  const noteTxt = 'Note';
+  const noteW = ctx.measureText(noteTxt).width;
+  ctx.font = `500 13px ${EX.font}`; ctx.fillStyle = orange3;
+  const byTxt = 'By そーなんだ化学';
+  const byW = ctx.measureText(byTxt).width;
+  const brandTotalW = libW + 3 + noteW + 10 + byW;
+  const brandX = W - P - brandTotalW;
+  // Draw brand
+  ctx.font = `italic 800 32px ${EX.font}`; ctx.fillStyle = orange1;
+  ctx.fillText(libTxt, brandX, y + 28);
+  ctx.font = `300 32px ${EX.font}`; ctx.fillStyle = orange2;
+  ctx.fillText(noteTxt, brandX + libW + 3, y + 28);
+  ctx.font = `500 13px ${EX.font}`; ctx.fillStyle = orange3;
+  ctx.fillText(byTxt, brandX + libW + 3 + noteW + 10, y + 28);
+
+  // Title — left
+  ctx.font = `bold 24px ${EX.font}`; ctx.fillStyle = EX.text;
+  const mainTitle = '中国LiB部材市況';
+  ctx.fillText(mainTitle, P, y + 26);
+  ctx.fillStyle = EX.accent;
+  ctx.fillText(` — ${cat}${sgLabel}`, P + ctx.measureText(mainTitle).width, y + 26);
+  y += 36;
+  // Sub
+  ctx.font = `13px ${EX.font}`; ctx.fillStyle = EX.muted;
+  ctx.fillText(`${fml(sortedMonths[0])} 〜 ${fml(stats.lat)}（${sortedMonths.length}ヶ月分）${useUSD ? ' | USD' : ' | CNY'}`, P, y + 13);
+  // Date right
+  const dateStr = `出力日: ${new Date().toLocaleDateString('ja-JP')}`;
+  ctx.fillText(dateStr, W - P - ctx.measureText(dateStr).width, y + 13);
+  y += 24;
+  // Line — gradient-like: orange left to accent right
+  ctx.strokeStyle = orange1; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(P + 120, y); ctx.stroke();
+  ctx.strokeStyle = EX.accent; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(P + 120, y); ctx.lineTo(W - P, y); ctx.stroke();
+  y += 20;
+
+  // Summary cards
+  const cards = [
+    { l: '品目数', v: String(stats.prods), c: EX.text },
+    { l: '値上がり', v: String(stats.up), c: EX.positive },
+    { l: '値下がり', v: String(stats.dn), c: EX.negative },
+    { l: '横ばい', v: String(stats.fl), c: EX.neutral },
+    { l: 'データ月数', v: String(sortedMonths.length), c: EX.text }
+  ];
+  const cardW = (W - P * 2 - 12 * 4) / 5;
+  for (let i = 0; i < cards.length; i++) {
+    const cx = P + i * (cardW + 12), cy = y;
+    // Card bg
+    roundRect(ctx, cx, cy, cardW, 64, 8, EX.card, EX.border);
+    // Label
+    ctx.font = `11px ${EX.font}`; ctx.fillStyle = EX.muted;
+    ctx.fillText(cards[i].l, cx + 12, cy + 20);
+    // Value
+    ctx.font = `bold 22px ${EX.font}`; ctx.fillStyle = cards[i].c;
+    ctx.fillText(cards[i].v, cx + 12, cy + 48);
+  }
+  y += 80;
+  return y;
+}
+
+function drawFooter(ctx, W, y, cat, sgLabel, label) {
+  y += 16;
+  ctx.strokeStyle = EX.border; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(EX.pad, y); ctx.lineTo(W - EX.pad, y); ctx.stroke();
+  y += 16;
+  ctx.font = `11px ${EX.font}`; ctx.fillStyle = EX.muted;
+  const txt = `LiB Note By そーなんだ化学 | ${cat}${sgLabel} | ${label} | ${new Date().toLocaleDateString('ja-JP')} 出力`;
+  ctx.fillText(txt, W - EX.pad - ctx.measureText(txt).width, y);
+  return y + 20;
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+// ===== Export Chart Options (larger fonts for readability) =====
+function exportChartOpt() {
+  return {
+    responsive: false,
+    maintainAspectRatio: false,
+    animation: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#e2e8f0',
+          font: { size: 16, family: 'sans-serif' },
+          boxWidth: 16,
+          padding: 18
+        }
+      },
+      tooltip: { enabled: false }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#e2e8f0', font: { size: 14, family: 'sans-serif' }, maxRotation: 45 },
+        grid: { color: '#334155' }
+      },
+      y: {
+        ticks: { color: '#e2e8f0', font: { size: 14, family: 'sans-serif' } },
+        grid: { color: '#334155' }
+      }
+    }
+  };
+}
+
+// ===== CHART EXPORT =====
+async function drawChartExport(cat, sgLabel, data, prods, months, stats) {
+  const DPR = 2, W = 1600;
+  const chartAreaW = W - EX.pad * 2 - 48;
+  const chartAreaH = 520;
+
+  // Create a temporary chart canvas at full resolution
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = chartAreaW * DPR;
+  tmpCanvas.height = chartAreaH * DPR;
+  tmpCanvas.style.width = chartAreaW + 'px';
+  tmpCanvas.style.height = chartAreaH + 'px';
+  // Must be in DOM for Chart.js
+  tmpCanvas.style.position = 'fixed'; tmpCanvas.style.left = '-99999px';
+  document.body.appendChild(tmpCanvas);
+
+  const labels = months.map(fml), ds = []; let ci = 0;
+  for (const p of selectedProducts) {
+    const map = {}; (data[p] || []).forEach(e => map[e.month] = e);
+    ds.push({
+      label: sn(p),
+      data: months.map(m => map[m]?.end ?? null),
+      borderColor: COLORS[ci % COLORS.length],
+      backgroundColor: COLORS[ci % COLORS.length] + '22',
+      borderWidth: 3, pointRadius: 4, tension: .3, spanGaps: true, fill: false
+    }); ci++;
+  }
+  const tmpChart = new Chart(tmpCanvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: ds },
+    options: { ...exportChartOpt(), devicePixelRatio: DPR }
+  });
+  await sleep(500);
+
+  // Convert chart canvas to image
+  const chartImg = new Image();
+  chartImg.src = tmpCanvas.toDataURL('image/png');
+  await new Promise(r => { chartImg.onload = r; });
+  tmpChart.destroy();
+  document.body.removeChild(tmpCanvas);
+
+  // Now draw the export canvas
+  const chartDisplayH = chartAreaH;
+  const estH = EX.pad + 170 + 40 + chartDisplayH + 90;
+  const cv = document.createElement('canvas');
+  cv.width = W * DPR; cv.height = estH * DPR;
+  const ctx = cv.getContext('2d');
+  ctx.scale(DPR, DPR);
+  // Background
+  ctx.fillStyle = EX.bg; ctx.fillRect(0, 0, W, estH);
+
+  let y = drawHeader(ctx, W, cat, sgLabel, { ...stats, prods: prods.length });
+
+  // Chart card
+  const cardX = EX.pad, cardY = y, chartW = W - EX.pad * 2, chartH = chartDisplayH + 56;
+  roundRect(ctx, cardX, cardY, chartW, chartH, 10, EX.card, EX.border);
+  ctx.font = `bold 16px ${EX.font}`; ctx.fillStyle = EX.text;
+  ctx.fillText(`${cat}${sgLabel} — 月末値推移${useUSD ? ' (USD)' : ' (CNY)'}`, cardX + EX.cardPad, cardY + 30);
+  // Draw chart image — preserving aspect ratio
+  const drawW = chartW - EX.cardPad * 2;
+  const drawH = chartDisplayH;
+  ctx.drawImage(chartImg, cardX + EX.cardPad, cardY + 46, drawW, drawH);
+  y = cardY + chartH + 8;
+
+  const totalH = drawFooter(ctx, W, y, cat, sgLabel, '月末値推移') + EX.pad;
+
+  // Resize canvas to actual height
+  const finalCv = document.createElement('canvas');
+  finalCv.width = W * DPR; finalCv.height = totalH * DPR;
+  const fctx = finalCv.getContext('2d');
+  fctx.drawImage(cv, 0, 0);
+  return finalCv;
+}
+
+// ===== TABLE EXPORT =====
+async function drawTableExport(cat, sgLabel, data, prods, tblMonths, stats) {
+  const DPR = 2;
+  const colWidths = computeColWidths(data, prods, tblMonths);
+  const totalTableW = colWidths.reduce((a, b) => a + b, 0);
+  const W = Math.max(1600, totalTableW + EX.pad * 2 + EX.cardPad * 2 + 20);
+
+  // Build rows for height calculation
+  const tableRows = buildTableRows(data, prods, tblMonths, cat);
+  const rowCount = tableRows.length;
+  const tableH = EX.headerH + rowCount * EX.rowH + 10;
+  const estH = EX.pad + 160 + 40 + tableH + 50 + 80;
+
+  const cv = document.createElement('canvas');
+  cv.width = W * DPR; cv.height = estH * DPR;
+  const ctx = cv.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.fillStyle = EX.bg; ctx.fillRect(0, 0, W, estH);
+
+  let y = drawHeader(ctx, W, cat, sgLabel, { ...stats, prods: prods.length });
+
+  // Table card
+  const cardX = EX.pad, cardY = y, cardInner = W - EX.pad * 2;
+  const cardH = tableH + 50;
+  roundRect(ctx, cardX, cardY, cardInner, cardH, 10, EX.card, EX.border);
+  ctx.font = `bold 15px ${EX.font}`; ctx.fillStyle = EX.text;
+  ctx.fillText(`${cat}${sgLabel} — 直近${tblMonths.length}ヶ月データ`, cardX + EX.cardPad, cardY + 28);
+
+  // Draw table
+  const tx = cardX + EX.cardPad, ty = cardY + 42;
+  drawTable(ctx, tx, ty, colWidths, tblMonths, tableRows);
+
+  y = cardY + cardH + 8;
+  const totalH = drawFooter(ctx, W, y, cat, sgLabel, '直近データ') + EX.pad;
+
+  const finalCv = document.createElement('canvas');
+  finalCv.width = W * DPR; finalCv.height = totalH * DPR;
+  const fctx = finalCv.getContext('2d');
+  fctx.drawImage(cv, 0, 0);
+  return finalCv;
+}
+
+function computeColWidths(data, prods, months) {
+  // Col 0: product name, Col 1: unit, Col 2..N+1: months, Col N+2: change
+  const tmpCv = document.createElement('canvas');
+  const tctx = tmpCv.getContext('2d');
+  tctx.font = `12px ${EX.font}`;
+  let nameW = 80;
+  for (const p of prods) { nameW = Math.max(nameW, tctx.measureText(sn(p)).width + 16); }
+  nameW = Math.min(nameW, 260);
+  const unitW = 65;
+  tctx.font = `11px ${EX.font}`;
+  let monthW = 62;
+  for (const m of months) { monthW = Math.max(monthW, tctx.measureText(fml(m)).width + 14); }
+  // Check data widths
+  for (const p of prods) {
+    const map = {}; (data[p] || []).forEach(e => map[e.month] = e);
+    for (const m of months) { const v = map[m]?.end; if (v != null) monthW = Math.max(monthW, tctx.measureText(fv(v)).width + 14); }
+  }
+  monthW = Math.min(monthW, 90);
+  const changeW = 72;
+  return [nameW, unitW, ...months.map(() => monthW), changeW];
+}
+
+function buildTableRows(data, prods, months, cat) {
+  const rows = [];
+  const showGroups = currentSubgroup === 'all' && SUBGROUPS[cat];
+  if (showGroups) {
+    const groups = {};
+    for (const p of prods) { const gl = getSubgroupLabel(cat, p) || 'その他'; if (!groups[gl]) groups[gl] = []; groups[gl].push(p); }
+    const order = SUBGROUPS[cat].filter(s => s.id !== 'all').map(s => s.label);
+    for (const gl of order) {
+      if (!groups[gl] || groups[gl].length === 0) continue;
+      rows.push({ type: 'group', label: gl });
+      for (const p of groups[gl]) rows.push(buildDataRow(data, p, months));
+    }
+    for (const gl of Object.keys(groups)) {
+      if (!order.includes(gl)) {
+        rows.push({ type: 'group', label: gl });
+        for (const p of groups[gl]) rows.push(buildDataRow(data, p, months));
+      }
+    }
+  } else {
+    for (const p of prods) rows.push(buildDataRow(data, p, months));
+  }
+  return rows;
+}
+
+function buildDataRow(data, p, months) {
+  const map = {}; (data[p] || []).forEach(e => map[e.month] = e);
+  const u = data[p]?.[0]?.unit || '';
+  const vals = months.map(m => { const v = map[m]?.end; return v != null ? fv(v) : '-'; });
+  const le = map[months.at(-1)];
+  let change = '-', changeColor = EX.muted;
+  if (le?.change != null) {
+    const pct = (le.change * 100).toFixed(1);
+    change = (le.change > 0 ? '+' : '') + pct + '%';
+    changeColor = le.change > 0.001 ? EX.positive : le.change < -0.001 ? EX.negative : EX.neutral;
+  }
+  return { type: 'data', name: sn(p), unit: u, vals, change, changeColor };
+}
+
+function drawTable(ctx, x, y, colWidths, months, rows) {
+  const totalW = colWidths.reduce((a, b) => a + b, 0);
+  // Header
+  ctx.fillStyle = EX.card; ctx.fillRect(x, y, totalW, EX.headerH);
+  ctx.strokeStyle = EX.border; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y + EX.headerH); ctx.lineTo(x + totalW, y + EX.headerH); ctx.stroke();
+
+  ctx.font = `500 11px ${EX.font}`; ctx.fillStyle = EX.muted;
+  let hx = x;
+  const headers = ['製品名', '単位', ...months.map(fml), '前月比'];
+  for (let i = 0; i < headers.length; i++) {
+    const align = i === 0 ? 'left' : 'right';
+    const tx = align === 'left' ? hx + 8 : hx + colWidths[i] - 8;
+    ctx.textAlign = align;
+    ctx.fillText(headers[i], tx, y + EX.headerH - 10);
+    hx += colWidths[i];
+  }
+  ctx.textAlign = 'left';
+  let ry = y + EX.headerH;
+
+  // Rows
+  for (const row of rows) {
+    if (row.type === 'group') {
+      // Group header
+      ctx.fillStyle = EX.card2; ctx.fillRect(x, ry, totalW, EX.rowH);
+      ctx.strokeStyle = EX.accent2; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, ry + EX.rowH); ctx.lineTo(x + totalW, ry + EX.rowH); ctx.stroke();
+      ctx.font = `bold 12px ${EX.font}`; ctx.fillStyle = EX.accent;
+      ctx.textAlign = 'left';
+      ctx.fillText(row.label, x + 8, ry + EX.rowH - 9);
+      ry += EX.rowH;
+      continue;
+    }
+    // Data row
+    ctx.strokeStyle = EX.border; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, ry + EX.rowH); ctx.lineTo(x + totalW, ry + EX.rowH); ctx.stroke();
+
+    let cx = x;
+    // Name
+    ctx.font = `12px ${EX.font}`; ctx.fillStyle = EX.text; ctx.textAlign = 'left';
+    ctx.fillText(row.name, cx + 8, ry + EX.rowH - 9);
+    cx += colWidths[0];
+    // Unit
+    ctx.font = `11px ${EX.font}`; ctx.fillStyle = EX.muted; ctx.textAlign = 'right';
+    ctx.fillText(row.unit, cx + colWidths[1] - 8, ry + EX.rowH - 9);
+    cx += colWidths[1];
+    // Month values
+    ctx.font = `12px ${EX.font}`;
+    for (let i = 0; i < row.vals.length; i++) {
+      ctx.fillStyle = row.vals[i] === '-' ? EX.muted : EX.text;
+      ctx.textAlign = 'right';
+      ctx.fillText(row.vals[i], cx + colWidths[i + 2] - 8, ry + EX.rowH - 9);
+      cx += colWidths[i + 2];
+    }
+    // Change
+    ctx.fillStyle = row.changeColor; ctx.textAlign = 'right';
+    ctx.fillText(row.change, cx + colWidths[colWidths.length - 1] - 8, ry + EX.rowH - 9);
+    ry += EX.rowH;
+  }
+  ctx.textAlign = 'left';
+}
+
+function showToast(msg,auto){const t=document.getElementById('export-toast'),sp=t.querySelector('.spinner');document.getElementById('toast-text').textContent=msg;t.classList.add('show');sp.style.display=msg.includes('ダウンロード')||msg.includes('失敗')?'none':'';if(auto)setTimeout(()=>t.classList.remove('show'),auto)}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ========== HELPERS ==========
+function fml(k){const[y,m]=k.split('-');return`${y.slice(2)}/${parseInt(m)}月`}
+function sn(n){return n.length>20?n.substring(0,18)+'…':n}
+function fv(v){if(v==null)return'-';if(v>=10000)return v.toLocaleString('ja-JP',{maximumFractionDigits:0});if(v>=100)return v.toLocaleString('ja-JP',{maximumFractionDigits:1});if(v>=1)return v.toLocaleString('ja-JP',{maximumFractionDigits:3});return v.toLocaleString('ja-JP',{maximumFractionDigits:4})}
+// ========== AUTH ==========
+const AUTH_PW = '1234';
+function doAuth(){
+  const v = document.getElementById('auth-input').value;
+  if(v === AUTH_PW){
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app-content').style.display='block';
+  } else {
+    document.getElementById('auth-error').style.display='block';
+    document.getElementById('auth-input').value='';
+    document.getElementById('auth-input').focus();
+  }
+}
+document.getElementById('auth-input').focus();
+</script>
+</div><!-- /app-content -->
+</body>
+</html>
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
