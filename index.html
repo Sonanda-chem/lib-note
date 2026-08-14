@@ -1561,6 +1561,10 @@ const TC_DATA = {
       {
         "quarter": "2025年Q4",
         "volume": 40.9
+      },
+      {
+        "quarter": "2026年Q1",
+        "volume": 36.9
       }
     ],
     "makers": {
@@ -1804,6 +1808,41 @@ const TC_DATA = {
               "share": null
             }
           ]
+        },
+        {
+          "label": "2026年Q1",
+          "makers": [
+            {
+              "name": "Apple",
+              "volume": 14.8,
+              "share": 40.1
+            },
+            {
+              "name": "Samsung",
+              "volume": 5.8,
+              "share": 15.7
+            },
+            {
+              "name": "Huawei",
+              "volume": 3.2,
+              "share": 8.8
+            },
+            {
+              "name": "Lenovo",
+              "volume": 3.0,
+              "share": 8.2
+            },
+            {
+              "name": "Xiaomi",
+              "volume": 2.7,
+              "share": 7.2
+            },
+            {
+              "name": "Others",
+              "volume": 7.4,
+              "share": 20.1
+            }
+          ]
         }
       ],
       "annual": [
@@ -1851,7 +1890,6 @@ const TC_DATA = {
       "maker_names": [
         "Apple",
         "Samsung",
-        "Amazon.com",
         "Huawei",
         "Lenovo",
         "Xiaomi",
@@ -2356,11 +2394,11 @@ function render3C(){
       shareData = mk.annual[mk.annual.length - 1];
       shareLabel = shareData.label;
     } else if(mk.quarterly && mk.quarterly.length > 0){
-      // Find the best quarterly with most data
+      // Find the best quarterly with most data (prefer latest)
       let best = null, bestCount = 0;
       for(const q of mk.quarterly){
         const cnt = q.makers.filter(m=>m.share!=null).length;
-        if(cnt > bestCount){bestCount=cnt; best=q;}
+        if(cnt >= bestCount){bestCount=cnt; best=q;}
       }
       if(best){shareData = best; shareLabel = best.label;}
     }
@@ -2377,7 +2415,7 @@ function render3C(){
       let best = null, bestCount = 0;
       for(const q of mk.quarterly){
         const cnt = q.makers.filter(m=>m.share!=null).length;
-        if(cnt > bestCount){bestCount=cnt; best=q;}
+        if(cnt >= bestCount){bestCount=cnt; best=q;}
       }
       shareData = best;
     }
