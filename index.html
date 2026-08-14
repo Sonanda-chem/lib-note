@@ -179,8 +179,10 @@ input:checked+.slider{background:var(--accent)}input:checked+.slider:before{tran
     <div class="tc-grid" id="tc-annual-grid"></div>
     <div class="tc-section-title">四半期出荷台数推移</div>
     <div class="tc-grid" id="tc-quarterly-grid"></div>
-    <div class="tc-section-title">メーカー別シェア</div>
+    <div class="tc-section-title">メーカー別シェア（通年）</div>
     <div class="tc-grid" id="tc-maker-grid"></div>
+    <div class="tc-section-title">メーカー別シェア（最新四半期）</div>
+    <div class="tc-grid" id="tc-maker-q-grid"></div>
   </div><!-- /page-3c -->
 </div><!-- /dashboard -->
 <div class="export-toast" id="export-toast"><div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px"></div><span id="toast-text"></span></div>
@@ -2383,7 +2385,7 @@ function render3C(){
     }));
   }
 
-  // Maker share - doughnut charts (annual data only, or best quarterly if no annual)
+  // Maker share - ANNUAL doughnut charts
   const mGrid = document.getElementById('tc-maker-grid');
   mGrid.innerHTML = '';
   for(const k of TC_KEYS){
@@ -2393,54 +2395,70 @@ function render3C(){
     if(mk.annual && mk.annual.length > 0){
       shareData = mk.annual[mk.annual.length - 1];
       shareLabel = shareData.label;
-    } else if(mk.quarterly && mk.quarterly.length > 0){
-      // Find the best quarterly with most data (prefer latest)
-      let best = null, bestCount = 0;
-      for(const q of mk.quarterly){
-        const cnt = q.makers.filter(m=>m.share!=null).length;
-        if(cnt >= bestCount){bestCount=cnt; best=q;}
-      }
-      if(best){shareData = best; shareLabel = best.label;}
     }
+    if(!shareData) { mGrid.innerHTML += `<div class="tc-card"><div class="tc-card-title">${TC_ICONS[k]} ${d.label}</div><div class="tc-card-sub">通年データなし</div></div>`; continue; }
     const id = `tc-maker-${k}`;
     mGrid.innerHTML += `<div class="tc-card"><div class="tc-card-title">${TC_ICONS[k]} ${d.label}</div><div class="tc-card-sub">${shareLabel} メーカー別シェア</div><div class="tc-chart"><canvas id="${id}"></canvas></div><div class="tc-maker-legend" id="${id}-legend"></div></div>`;
   }
   for(const k of TC_KEYS){
     const d = TC_DATA[k];
     const mk = d.makers;
-    let shareData = null;
-    if(mk.annual && mk.annual.length > 0){
-      shareData = mk.annual[mk.annual.length - 1];
-    } else if(mk.quarterly && mk.quarterly.length > 0){
-      let best = null, bestCount = 0;
-      for(const q of mk.quarterly){
-        const cnt = q.makers.filter(m=>m.share!=null).length;
-        if(cnt >= bestCount){bestCount=cnt; best=q;}
-      }
-      shareData = best;
-    }
-    if(!shareData) continue;
-
+    if(!mk.annual || mk.annual.length === 0) continue;
+    const shareData = mk.annual[mk.annual.length - 1];
     const makers = shareData.makers.filter(m=>m.share!=null);
     const ctx = document.getElementById(`tc-maker-${k}`).getContext('2d');
     tcCharts.push(new Chart(ctx, {
       type:'doughnut',
       data:{
         labels: makers.map(m=>m.name),
-        datasets:[{
-          data: makers.map(m=>m.share),
-          backgroundColor: TC_COLORS.slice(0, makers.length),
-          borderColor: '#1e293b',
-          borderWidth: 2
-        }]
+        datasets:[{data: makers.map(m=>m.share), backgroundColor: TC_COLORS.slice(0, makers.length), borderColor: '#1e293b', borderWidth: 2}]
       },
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
     }));
-    // Legend
     const leg = document.getElementById(`tc-maker-${k}-legend`);
-    makers.forEach((m,i)=>{
-      leg.innerHTML += `<span style="border-left:3px solid ${TC_COLORS[i]};padding-left:6px">${m.name} ${m.share}%</span>`;
-    });
+    makers.forEach((m,i)=>{ leg.innerHTML += `<span style="border-left:3px solid ${TC_COLORS[i]};padding-left:6px">${m.name} ${m.share}%</span>`; });
+  }
+
+  // Maker share - LATEST QUARTERLY doughnut charts
+  const mqGrid = document.getElementById('tc-maker-q-grid');
+  mqGrid.innerHTML = '';
+  for(const k of TC_KEYS){
+    const d = TC_DATA[k];
+    const mk = d.makers;
+    let latQ = null;
+    if(mk.quarterly && mk.quarterly.length > 0){
+      for(let qi=mk.quarterly.length-1;qi>=0;qi--){
+        const cnt = mk.quarterly[qi].makers.filter(m=>m.share!=null).length;
+        if(cnt>=3){latQ=mk.quarterly[qi];break;}
+      }
+    }
+    if(!latQ) { mqGrid.innerHTML += `<div class="tc-card"><div class="tc-card-title">${TC_ICONS[k]} ${d.label}</div><div class="tc-card-sub">四半期データなし</div></div>`; continue; }
+    const id = `tc-makerq-${k}`;
+    mqGrid.innerHTML += `<div class="tc-card"><div class="tc-card-title">${TC_ICONS[k]} ${d.label}</div><div class="tc-card-sub">${latQ.label} メーカー別シェア</div><div class="tc-chart"><canvas id="${id}"></canvas></div><div class="tc-maker-legend" id="${id}-legend"></div></div>`;
+  }
+  for(const k of TC_KEYS){
+    const d = TC_DATA[k];
+    const mk = d.makers;
+    let latQ = null;
+    if(mk.quarterly && mk.quarterly.length > 0){
+      for(let qi=mk.quarterly.length-1;qi>=0;qi--){
+        const cnt = mk.quarterly[qi].makers.filter(m=>m.share!=null).length;
+        if(cnt>=3){latQ=mk.quarterly[qi];break;}
+      }
+    }
+    if(!latQ) continue;
+    const qmakers = latQ.makers.filter(m=>m.share!=null);
+    const ctx = document.getElementById(`tc-makerq-${k}`).getContext('2d');
+    tcCharts.push(new Chart(ctx, {
+      type:'doughnut',
+      data:{
+        labels: qmakers.map(m=>m.name),
+        datasets:[{data: qmakers.map(m=>m.share), backgroundColor: TC_COLORS.slice(0, qmakers.length), borderColor: '#1e293b', borderWidth: 2}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
+    }));
+    const leg = document.getElementById(`tc-makerq-${k}-legend`);
+    qmakers.forEach((m,i)=>{ leg.innerHTML += `<span style="border-left:3px solid ${TC_COLORS[i]};padding-left:6px">${m.name} ${m.share}%</span>`; });
   }
 }
 
