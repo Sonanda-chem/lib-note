@@ -100,6 +100,24 @@ input:checked+.slider{background:var(--accent)}input:checked+.slider:before{tran
 .brand-by{font-size:12px;color:#fdba74;margin-left:8px;font-weight:500;letter-spacing:0.5px}
 /* Export handled via direct canvas drawing */
 @media(max-width:768px){.chart-container{height:300px}.summary-row{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== CATL決算ページ ===== */
+.catl-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.catl-kpi{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--border)}
+.catl-kpi-label{font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.catl-kpi-value{font-size:22px;font-weight:700;color:var(--text);line-height:1.2}
+.catl-kpi-sub{font-size:12px;margin-top:6px;color:var(--text-muted)}
+.catl-up{color:var(--positive);font-weight:600}
+.catl-down{color:var(--negative);font-weight:600}
+.catl-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.catl-note{background:var(--card);border-radius:12px;padding:18px 20px;border:1px solid var(--border);border-left:3px solid var(--accent)}
+.catl-note.warn{border-left-color:var(--negative)}
+.catl-note-title{font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.catl-note-body{font-size:13px;line-height:1.75;color:var(--text-muted)}
+.catl-note-body b{color:var(--text)}
+.catl-src{font-size:11px;color:var(--text-muted);opacity:.8;margin-top:8px;text-align:right;line-height:1.6}
+.catl-tbl td:first-child,.catl-tbl th:first-child{text-align:left}
+@media(max-width:768px){.catl-kpi-row{grid-template-columns:repeat(2,1fr)}.catl-grid2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -135,6 +153,7 @@ input:checked+.slider{background:var(--accent)}input:checked+.slider:before{tran
   <div class="page-switcher">
     <button class="page-sw-btn active" id="sw-lib" onclick="switchPage('lib')">🔋 LiB部材市況</button>
     <button class="page-sw-btn" id="sw-3c" onclick="switchPage('3c')">📱 世界3C市場</button>
+    <button class="page-sw-btn" id="sw-catl" onclick="switchPage('catl')">🇨🇳 CATL決算</button>
   </div>
   <div id="page-lib">
   <div class="summary-row" id="summary-row"></div>
@@ -184,6 +203,80 @@ input:checked+.slider{background:var(--accent)}input:checked+.slider:before{tran
     <div class="tc-section-title">メーカー別シェア（最新四半期）</div>
     <div class="tc-grid" id="tc-maker-q-grid"></div>
   </div><!-- /page-3c -->
+  <div id="page-catl" style="display:none">
+    <div class="tc-section-title">CATL（寧徳時代）2026年上半期決算</div>
+    <div class="catl-kpi-row">
+      <div class="catl-kpi"><div class="catl-kpi-label">売上高</div><div class="catl-kpi-value">2,769<span style="font-size:14px">億元</span></div><div class="catl-kpi-sub"><span class="catl-up">+54.8%</span> 前年1,789億元</div></div>
+      <div class="catl-kpi"><div class="catl-kpi-label">純利益（帰属）</div><div class="catl-kpi-value">433<span style="font-size:14px">億元</span></div><div class="catl-kpi-sub"><span class="catl-up">+42.0%</span> 前年305億元</div></div>
+      <div class="catl-kpi"><div class="catl-kpi-label">総合粗利率</div><div class="catl-kpi-value">23.93<span style="font-size:14px">%</span></div><div class="catl-kpi-sub"><span class="catl-down">-1.09pt</span> 前年25.02%</div></div>
+      <div class="catl-kpi"><div class="catl-kpi-label">産能利用率</div><div class="catl-kpi-value">94.86<span style="font-size:14px">%</span></div><div class="catl-kpi-sub"><span class="catl-up">+5.0pt</span> ほぼ満産</div></div>
+    </div>
+
+    <div class="tc-section-title">業績ハイライト</div>
+    <div class="section-card">
+      <div class="table-wrap"><table class="catl-tbl">
+        <thead><tr><th>項目</th><th>26年上期</th><th>25年上期</th><th>増減率</th></tr></thead>
+        <tbody>
+          <tr><td>売上高</td><td>2,769億元</td><td>1,789億元</td><td class="catl-up">+54.8%</td></tr>
+          <tr><td>純利益（帰属）</td><td>433億元</td><td>305億元</td><td class="catl-up">+42.0%</td></tr>
+          <tr><td>純利益（非経常控除後）</td><td>390億元</td><td>272億元</td><td class="catl-up">+43.4%</td></tr>
+          <tr><td>R&amp;D投入</td><td>114億元</td><td>101億元</td><td class="catl-up">+12.7%</td></tr>
+          <tr><td>総合粗利率</td><td>23.93%</td><td>25.02%</td><td class="catl-down">-1.09pt</td></tr>
+          <tr><td>基本EPS</td><td>9.51元</td><td>6.92元</td><td class="catl-up">+37.4%</td></tr>
+        </tbody></table></div>
+    </div>
+
+    <div class="tc-section-title">セグメント別売上</div>
+    <div class="section-card">
+      <div class="table-wrap"><table class="catl-tbl">
+        <thead><tr><th>セグメント</th><th>26年上期</th><th>25年上期</th><th>増減率</th><th>粗利率</th></tr></thead>
+        <tbody>
+          <tr><td>動力電池システム</td><td>1,921億元</td><td>1,316億元</td><td class="catl-up">+46.0%</td><td>20.63%</td></tr>
+          <tr><td>蓄能電池システム</td><td>533億元</td><td>284億元</td><td class="catl-up">+87.5%</td><td>23.96%</td></tr>
+          <tr><td>電池材料・鉱産資源</td><td>188億元</td><td>112億元</td><td class="catl-up">+67.2%</td><td>27.04%</td></tr>
+          <tr><td>その他</td><td>127億元</td><td>77億元</td><td class="catl-up">+66.0%</td><td>—</td></tr>
+        </tbody></table></div>
+      <div class="catl-src">売上構成比：動力電池 69.4% ／ 蓄能 19.2% ／ 材料・鉱産 6.8%（25年通期は動力74.7%／蓄能14.7%）</div>
+    </div>
+
+    <div class="catl-grid2">
+      <div class="tc-card"><div class="tc-card-title">四半期業績推移</div><div class="tc-card-sub">単位：億元</div><div class="tc-chart"><canvas id="catl-q-chart"></canvas></div></div>
+      <div class="tc-card"><div class="tc-card-title">生産能力・生産量</div><div class="tc-card-sub">単位：GWh（26上期は半期）</div><div class="tc-chart"><canvas id="catl-cap-chart"></canvas></div></div>
+      <div class="tc-card"><div class="tc-card-title">販売量（用途別）</div><div class="tc-card-sub">単位：GWh／26上期は推計値</div><div class="tc-chart"><canvas id="catl-vol-chart"></canvas></div></div>
+      <div class="tc-card"><div class="tc-card-title">売上構成 国内 vs 海外</div><div class="tc-card-sub">単位：億元（25上期・26上期は半期）</div><div class="tc-chart"><canvas id="catl-geo-chart"></canvas></div></div>
+    </div>
+
+    <div class="tc-section-title">生産・市場シェア</div>
+    <div class="section-card">
+      <div class="table-wrap"><table class="catl-tbl">
+        <thead><tr><th>項目</th><th>26年上期</th><th>25年上期</th><th>増減</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td>電池システム産量</td><td>498 GWh</td><td>310 GWh</td><td class="catl-up">+60.6%</td><td style="text-align:left;color:var(--text-muted);font-size:12px">半年報の開示値</td></tr>
+          <tr><td>産能</td><td>525 GWh</td><td>345 GWh</td><td class="catl-up">+52.2%</td><td style="text-align:left;color:var(--text-muted);font-size:12px">在建産能 764 GWh</td></tr>
+          <tr><td>産能利用率</td><td>94.86%</td><td>89.86%</td><td class="catl-up">+5.0pt</td><td style="text-align:left;color:var(--text-muted);font-size:12px">ほぼフル稼働</td></tr>
+          <tr><td>世界動力電池シェア</td><td>39.9%</td><td>—</td><td>世界1位</td><td style="text-align:left;color:var(--text-muted);font-size:12px">SNE・1〜6月確報。装車量242.7GWh(+25.3%)</td></tr>
+          <tr><td>世界蓄能電池出荷シェア</td><td>27.1%</td><td>25.6%</td><td class="catl-up">+1.5pt</td><td style="text-align:left;color:var(--text-muted);font-size:12px">SNE・1〜6月。出荷125GWh(+81%)</td></tr>
+          <tr><td>海外動力電池シェア</td><td>33.7%</td><td>30.0%</td><td class="catl-up">+3.7pt</td><td style="text-align:left;color:var(--text-muted);font-size:12px">SNE・1〜5月</td></tr>
+          <tr><td>国内乗用車 装車量シェア</td><td>46.7%</td><td>41.1%</td><td class="catl-up">+5.6pt</td><td style="text-align:left;color:var(--text-muted);font-size:12px">創新聯盟・乗用車限定。三元系75.2%</td></tr>
+        </tbody></table></div>
+      <div class="catl-src">動力電池は9年連続で世界1位（通期ベース）。半年報記載の40.2%はSNE 1〜5月速報値のため、上表は8月公表の1〜6月確報に更新<br>※国内シェアは中国汽車動力電池産業創新聯盟の装車量ベース（全車種では46.0%）。SNEや乗聯分会とは集計基準が異なります</div>
+    </div>
+
+    <div class="tc-section-title">注目ポイント</div>
+    <div class="catl-grid2">
+      <div class="catl-note"><div class="catl-note-title">⚡ 蓄エネ（ESS）が最速の成長エンジンに</div><div class="catl-note-body">蓄能電池システムの売上は前年同期比<b>+87.5%</b>の533億元。売上構成比は15.9%→19.2%へ上昇し、動力電池（+46.0%）を大きく上回る伸び。世界の蓄能セル出荷量自体が上半期に約486GWh（+93%、SMM）と急拡大しており、AIデータセンター（AIDC）向けが新用途として立ち上がっている。</div></div>
+      <div class="catl-note"><div class="catl-note-title">🏭 ほぼフル稼働、現有比1.46倍の大増設</div><div class="catl-note-body">産能525GWhに対し産量498GWh、<b>稼働率94.86%</b>（前年89.86%）とほぼ満産。在建産能は<b>764GWh</b>＝現有産能の約1.46倍。済寧・中州・溧陽・宜賓の国内拠点に加え、インドネシア工場、ハンガリー工場、スペイン合弁工場を並行建設中。</div></div>
+      <div class="catl-note"><div class="catl-note-title">🌍 海外は「量」より「質」— 粗利率30%</div><div class="catl-note-body">海外売上871億元（+42.4%）、粗利率は海外<b>29.97%</b>（+0.95pt）に対し国内21.16%（-1.78pt）で差は約9ptに拡大。ただし海外比率は<b>34.2%（25上期）→31.5%（26上期）へ2.8pt低下</b>。国内の伸び（+61.3%）が海外を上回ったためで、「稼ぐのは海外、伸ばしているのは国内」という構図。</div></div>
+      <div class="catl-note warn"><div class="catl-note-title">📉 増収増益でも利益率は低下</div><div class="catl-note-body">総合粗利率は<b>23.93%</b>（-1.09pt）。動力20.63%（-1.78pt）、蓄能23.96%（-1.56pt）と主力2事業がともに悪化。利益の伸びが売上を下回った要因は粗利率だけでなく、<b>財務費用が-58.2億元→-6.3億元へ約52億元悪化（為替差損）</b>したことも大きい。下期は炭酸リチウム価格上昇（25年下期7〜10万元/t→26年上期15〜20万元/t）が最大の変数。</div></div>
+      <div class="catl-note warn"><div class="catl-note-title">🧾 電池消費税：2026年9月から段階課税</div><div class="catl-note-body">リチウムイオン電池への消費税が<b>2026年9月1日に施行済み（税率2%、2027年9月1日から4%）</b>。課税は生産・委託加工・輸入の出荷段階で、<b>電芯・電池簇が対象、蓄能システム（パック）自体は対象外</b>。輸出は先徴後還のため海外向けは実質中立。ナトリウムイオン・全固体は2028年12月末まで免税。集邦試算では2%で年間100億元超の負担。</div></div>
+      <div class="catl-note"><div class="catl-note-title">💰 A株史上最大規模の自社株買い＋中間配当</div><div class="catl-note-body">200〜400億元（上限573元/株）の自社株買い・全額消却を発表。A株市場で単一としては過去最大規模だが、8月12日に株主総会で承認された段階で<b>8月31日時点では未実施</b>。中間配当（10株14.11元・総額約64.93億元、配当性向15%）はA株分61.8億元が8月10日除権で実施済み。</div></div>
+    </div>
+
+    <div class="catl-src" style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+      データ出典：CATL 2026年半年度報告（2026年7月25日開示）／ 2021〜2025年年度報告 ／ 2025年半年度報告 ／ 2026年一季報 ／ SNE Research（1〜6月確報）／ 中国汽車動力電池産業創新聯盟 ／ SMM<br>
+      金額は人民元建て（億元）。「26上期」は2026年1〜6月の半期実績。※本資料は投資助言を目的としたものではありません
+    </div>
+  </div><!-- /page-catl -->
 </div><!-- /dashboard -->
 <div class="export-toast" id="export-toast"><div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px"></div><span id="toast-text"></span></div>
 
@@ -1026,11 +1119,43 @@ function fvNote(v){
 
 // ========== PAGE SWITCH ==========
 function switchPage(page){
-  document.getElementById('page-lib').style.display = page==='lib' ? 'block' : 'none';
-  document.getElementById('page-3c').style.display = page==='3c' ? 'block' : 'none';
-  document.getElementById('sw-lib').classList.toggle('active', page==='lib');
-  document.getElementById('sw-3c').classList.toggle('active', page==='3c');
+  ['lib','3c','catl'].forEach(p=>{
+    document.getElementById('page-'+p).style.display = (p===page) ? 'block' : 'none';
+    document.getElementById('sw-'+p).classList.toggle('active', p===page);
+  });
   if(page==='3c' && !tc3cRendered) render3C();
+  if(page==='catl' && !catlRendered) renderCATL();
+}
+
+// ========== CATL EARNINGS PAGE ==========
+// 出典：CATL 2026年半年度報告ほか（ファクトチェック済み）
+let catlRendered = false;
+const CATL_Q   = {labels:['25/Q1','25/Q2','25/Q3','25/Q4','26/Q1','26/Q2'], rev:[847,942,1042,1406,1291,1478], prof:[140,165,185,232,207,225]};
+const CATL_CAP = {labels:['2020','2021','2022','2023','2024','2025','26上期'], cap:[69.1,170.4,390,552,676,772,525], prod:[null,162.3,325,389,516,748,498]};
+const CATL_VOL = {labels:['2020','2021','2022','2023','2024','2025','26上期*'], ev:[44.5,116.7,242,321,381,541,320], ess:[2.4,16.7,47,69,93,121,110]};
+const CATL_GEO = {labels:['2021','2022','2023','2024','2025','25上期','26上期'], dom:[1025,2517,2699,2517,2941,1177,1898], ovs:[279,769,1310,1103,1296,612,871]};
+
+function catlOpts(unit){
+  return {responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',boxWidth:12,font:{size:11}}},
+      tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y==null?'—':c.parsed.y.toLocaleString())+unit}}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:11}},grid:{color:'#334155'}},
+            y:{ticks:{color:'#94a3b8',font:{size:11}},grid:{color:'#334155'},beginAtZero:true}}};
+}
+
+function renderCATL(){
+  if(catlRendered) return;
+  catlRendered = true;
+  new Chart(document.getElementById('catl-q-chart'),{type:'bar',data:{labels:CATL_Q.labels,
+    datasets:[{label:'売上高',data:CATL_Q.rev,backgroundColor:'#38bdf8'},{label:'純利益',data:CATL_Q.prof,backgroundColor:'#818cf8'}]},options:catlOpts('億元')});
+  new Chart(document.getElementById('catl-cap-chart'),{type:'bar',data:{labels:CATL_CAP.labels,
+    datasets:[{label:'生産能力',data:CATL_CAP.cap,backgroundColor:'#38bdf8'},{label:'生産量',data:CATL_CAP.prod,backgroundColor:'#34d399'}]},options:catlOpts('GWh')});
+  const vo = catlOpts('GWh'); vo.scales.x.stacked = true; vo.scales.y.stacked = true;
+  new Chart(document.getElementById('catl-vol-chart'),{type:'bar',data:{labels:CATL_VOL.labels,
+    datasets:[{label:'動力電池(EV)',data:CATL_VOL.ev,backgroundColor:'#818cf8'},{label:'蓄能電池(ESS)',data:CATL_VOL.ess,backgroundColor:'#fbbf24'}]},options:vo});
+  const go = catlOpts('億元'); go.scales.x.stacked = true; go.scales.y.stacked = true;
+  new Chart(document.getElementById('catl-geo-chart'),{type:'bar',data:{labels:CATL_GEO.labels,
+    datasets:[{label:'国内（中国）',data:CATL_GEO.dom,backgroundColor:'#38bdf8'},{label:'海外',data:CATL_GEO.ovs,backgroundColor:'#f97316'}]},options:go});
 }
 
 // ========== 3C MARKET DATA & RENDER ==========
